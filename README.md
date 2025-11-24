@@ -23,8 +23,28 @@ tar -xvf gde-creator-linux-x64.tar.gz
 ```
 
 ### Option 2: Arch Linux (AUR)
-Coming soon
-
+#### Using `yay`:
+1. Type into terminal and follow installation:
+```console
+yay -Sy gde-creator
+```
+2. Run app:
+```console
+gde-creator
+```
+#### Installing yourself:
+1. Git clone repository:
+```console
+git clone https://aur.archlinux.org/gde-creator-bin.git
+```
+2. CD into directory:
+```console
+cd gde-creator
+```
+3. Build and install:
+```console
+makepkg -si
+```
 ## 💻 Usage
 ```console
 gde-creator
