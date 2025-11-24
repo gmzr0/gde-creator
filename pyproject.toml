@@ -1,0 +1,17 @@
+[project]
+name = "gde-game"
+version = "0.1.0"
+description = "Game Desktop Entry Creator with fetching icons and name from Steam API."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "httpx>=0.28.1",
+    "questionary>=2.1.1",
+    "rich>=14.2.0",
+    "textual>=6.6.0",
+]
+
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.17.0",
+]
