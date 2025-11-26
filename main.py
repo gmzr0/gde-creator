@@ -11,41 +11,9 @@ from rich.panel import Panel
 from prompt_toolkit.completion import PathCompleter
 
 
-
 console = Console()
 
-async def main():
-    console.print(Panel.fit(
-        "[bold cyan]Game Desktop Entry Creator [/bold cyan]\n"
-        "[dim]Create desktop entry for game from steam database[/dim]",
-        border_style="cyan"
-    ))
 
-    game_query = await questionary.text("Please input game name:").ask_async()
-    if not game_query:
-        console.print("[red]No game inputed.[/red]")
-        return
-
-    found_games = []
-
-    with console.status(f"[bold green]Searching for game in steam database..[/bold green]"):
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                "https://store.steampowered.com/api/storesearch/",
-                params={"term": game_query, "l": "english", "cc": "US"}
-            )
-            data = response.json()
-            items = data.get("items", [])
-
-            for item in items:
-                found_games.append({
-                    "name": item['name'],
-                    "id": str(item["id"])
-                })
-
-    if not found_games:
-        console.print("[yellow]Didn't found this game.[/yellow]")
-        return
 
     choices = [
         questionary.Choice(
@@ -58,54 +26,15 @@ async def main():
         "Please select game from list:",
         choices=choices
     ).ask_async()
-    
 
     if not selected_game:
         console.print("[red]Didn't selected game[/red]")
         return
 
-    icon_path = ""
+    game_id = selected_game["id"]
 
-    cookies = {
-        "wants_mature_content": "1",
-        "birthtime": "189302401",
-        "lastagecheckage": "1-January-1980"
-    }
+    icon_path = await get_game_assets(game_id)
 
-    game_id = selected_game['id']
-
-
-    try:
-        async with httpx.AsyncClient(cookies=cookies) as client:
-            with console.status("[dim]Checking...[/dim]"):
-
-                resp = await client.get(f"https://steamcommunity.com/app/{game_id}")
-                match = re.search(r'class="apphub_AppIcon".*?src="(.*?)"', resp.text, re.DOTALL)
-            
-            if match:
-                with console.status("[dim]Downloading icon...[/dim]"):
-
-                    url = match.group(1)
-                    img_response = await client.get(url)
-                    
-                    create_dir = "~/.local/share/icons/gameicons" 
-                    full_path = os.path.expanduser(create_dir)
-
-                    os.makedirs(full_path, exist_ok=True)
-                    icon_path = os.path.expanduser(f"~/.local/share/icons/gameicons/{game_id}.jpg")
-
-                    with open(icon_path, "wb") as f:
-                        f.write(img_response.content)
-
-                console.print(f"[dim]Icon has been downloaded correctly.[/dim] \n {icon_path}")
-                console.print()    
-            else:
-                console.print(f"[red]Couldn't find icon.[/red]")
-                return
-    except Exception as e:
-        console.print(e)
-        return
-    
     default_exec = ""
     console.print(f"[yellow]Please provide path to .exe file or sh script. \nIn next input you will include runner commands.[/yellow]")
     exec_cmd = await questionary.text(
@@ -145,7 +74,7 @@ async def main():
     table.add_row("Icon path:", icon_path)
 
     console.print(table)
-    
+
     if await questionary.confirm("Do you want to create desktop entry?").ask_async():
         safe_name = "".join([c if c.isalnum() else "_" for c in selected_game['name']]).lower()
         desktop_path = os.path.expanduser(f"~/.local/share/applications/{safe_name}.desktop")
@@ -167,7 +96,107 @@ Categories=Game;
         console.print("[red]Canceled.[/red]")
 
 
+class NameValidator(Validator):
+    def validate(self, query):
+        if len(query.text) == 0:
+            raise ValidationError(
+                message="Please provide correct input",
+                cursor_position=len(query.text),
+            )
+
+
+async def get_valid_games():
+    while True:
+        game_query = await questionary.text(
+            "Please insert game name:", validate=NameValidator
+        ).ask_async()
+
+        if game_query is None:
+            raise KeyboardInterrupt
+
+        if not game_query:
+            continue
+
+        found_games = []
+        try:
+            with console.status(
+                "[bold green]Searching for game in steam database..[/bold green]"
+            ):
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(
+                        "https://store.steampowered.com/api/storesearch/",
+                        params={"term": game_query, "l": "english", "cc": "US"},
+                    )
+
+                    data = response.json()
+                    items = data.get("items", [])
+
+                    if not items:
+                        console.print(
+                            f"[yellow]Cannot find game: {game_query}. Please try again.[/yellow]"
+                        )
+                        continue
+
+                    for item in items:
+                        found_games.append(
+                            {"name": item["name"], "id": str(item["id"])}
+                        )
+
+                    return found_games
+        except Exception:
+            console.print("Error.")
+
+
+async def get_game_assets(steam_id):
+    icon_path = ""
+    cookies = {
+        "wants_mature_content": "1",
+        "birthtime": "189302401",
+        "lastagecheckage": "1-January-1980",
+    }
+    try:
+        async with httpx.AsyncClient(cookies=cookies) as client:
+            with console.status("[dim]Checking...[/dim]"):
+                resp = await client.get(f"https://steamcommunity.com/app/{steam_id}")
+                match = re.search(
+                    r'class="apphub_AppIcon".*?src="(.*?)"', resp.text, re.DOTALL
+                )
+
+            if match:
+                with console.status("[dim]Downloading icon...[/dim]"):
+                    url = match.group(1)
+                    img_response = await client.get(url)
+
+                    create_dir = "~/.local/share/icons/gameicons"
+                    full_path = os.path.expanduser(create_dir)
+
+                    os.makedirs(full_path, exist_ok=True)
+                    icon_path = os.path.expanduser(
+                        f"~/.local/share/icons/gameicons/{steam_id}.jpg"
+                    )
+
+                    with open(icon_path, "wb") as f:
+                        f.write(img_response.content)
+
+                console.print(
+                    f"[dim]Icon has been downloaded correctly.[/dim] \n {icon_path}"
+                )
+                console.print()
+                return icon_path
+            else:
+                console.print("[red]Couldn't find icon.[/red]")
+                return
+    except Exception as e:
+        console.print(e)
+        return
+
+
 if __name__ == "__main__":
-    asyncio.run(main())
-
-
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print()
+        sys.exit(0)
+    except Exception:
+        console.print("[red]Program encountered error.[/red]")
+        sys.exit(1)
