@@ -102,6 +102,7 @@ async def main():
     console.print(table)
 
     if await questionary.confirm("Do you want to create desktop entry?").ask_async():
+        os.makedirs(os.path.expanduser("~/.local/share/applications"), exist_ok=True)
         safe_name = "".join(
             [c if c.isalnum() else "_" for c in selected_game["name"]]
         ).lower()
