@@ -1,14 +1,13 @@
 import asyncio
 import os
 import re
+import sys
 import httpx
 import questionary
-import subprocess
+from questionary import Validator, ValidationError
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
-from rich.progress import track
-from rich.text import Text
 from prompt_toolkit.completion import PathCompleter
 
 
