@@ -14,17 +14,38 @@ from prompt_toolkit.completion import PathCompleter
 console = Console()
 
 
+async def main():
+    console.print(
+        Panel.fit(
+            "[bold cyan]Game Desktop Entry Creator [/bold cyan]\n"
+            "[dim]Create desktop entry for game from steam database[/dim]",
+            border_style="cyan",
+        )
+    )
+    console.print(
+        Panel.fit(
+            "[bold magenta]Defaults:[/bold magenta]\n"
+            "[dim]Icon path: ~/.local/share/icons/gameicons/*[/dim]",
+            border_style="cyan",
+        )
+    )
+
+    found_games = await get_valid_games()
 
     choices = [
         questionary.Choice(
-            title=f"{g["name"]} (ID: {g["id"]})",
-            value=g
-        ) for g in found_games
+            title=[
+                ("class:text", g["name"]),
+                ("class:text", " "),
+                ("fg:yellow", f"(ID: {g['id']})"),
+            ],
+            value=g,
+        )
+        for g in found_games
     ]
 
     selected_game = await questionary.select(
-        "Please select game from list:",
-        choices=choices
+        "Please select game from list:", choices=choices
     ).ask_async()
 
     if not selected_game:
@@ -36,34 +57,38 @@ console = Console()
     icon_path = await get_game_assets(game_id)
 
     default_exec = ""
-    console.print(f"[yellow]Please provide path to .exe file or sh script. \nIn next input you will include runner commands.[/yellow]")
+    console.print(
+        "[yellow]Please provide [red]absolute path[/red] to .exe file or sh script. \nIn next input you will include runner commands.[/yellow]"
+    )
+
     exec_cmd = await questionary.text(
         "Please provide exec path:",
         default=default_exec,
         completer=PathCompleter(),
+        validate=NameValidator,
     ).ask_async()
-    if not exec_cmd:
-        console.print("[yellow]Provide exec path.")
-        return
-    
+    if exec_cmd is None:
+        raise KeyboardInterrupt
+
     runner_cmd = await questionary.text(
         "Please provide runner commands (blank if no runner or sh script provided before):",
-        default=""
+        default="",
     ).ask_async()
-
-    if runner_cmd:
-        final_exec_cmd = f'{runner_cmd} "{exec_cmd}"'
-    else:
-        final_exec_cmd = f'bash "{exec_cmd}"'
 
     cmd_path = await questionary.text(
         "Please provide directory path where exec is:",
         default=os.path.dirname(exec_cmd),
         completer=PathCompleter(),
+        validate=NameValidator,
     ).ask_async()
-    if not cmd_path:
-        console.print("[red]Please provide directory path.[/red]")
-        return
+    if cmd_path is None:
+        raise KeyboardInterrupt
+
+    ## either run.sh provided or runner
+    if runner_cmd:
+        final_exec_cmd = f'{runner_cmd} "{exec_cmd}"'
+    else:
+        final_exec_cmd = f'bash "{exec_cmd}"'
 
     table = Table(title="Summary of desktop entry:")
     table.add_column("ID", style="cyan", no_wrap=True)
@@ -71,27 +96,34 @@ console = Console()
 
     table.add_row("Name", selected_game["name"])
     table.add_row("Exec path:", final_exec_cmd)
+    table.add_row("Directory path:", cmd_path)
     table.add_row("Icon path:", icon_path)
 
     console.print(table)
 
     if await questionary.confirm("Do you want to create desktop entry?").ask_async():
-        safe_name = "".join([c if c.isalnum() else "_" for c in selected_game['name']]).lower()
-        desktop_path = os.path.expanduser(f"~/.local/share/applications/{safe_name}.desktop")
+        safe_name = "".join(
+            [c if c.isalnum() else "_" for c in selected_game["name"]]
+        ).lower()
+        desktop_path = os.path.expanduser(
+            f"~/.local/share/applications/{safe_name}.desktop"
+        )
         content = f"""[Desktop Entry]
-Type=Application
-Name={selected_game['name']}
-Exec={final_exec_cmd}
-Path={cmd_path}
-Icon={icon_path}
-Terminal=false
-Categories=Game;
-"""
+    Type=Application
+    Name={selected_game["name"]}
+    Exec={final_exec_cmd}
+    Path={cmd_path}
+    Icon={icon_path}
+    Terminal=false
+    Categories=Game;
+    """
         with open(desktop_path, "w") as f:
             f.write(content)
 
         console.print()
-        console.print(Panel(f"[bold green]Successfully created desktop entry.[/bold green]"))
+        console.print(
+            Panel("[bold green]Successfully created desktop entry.[/bold green]")
+        )
     else:
         console.print("[red]Canceled.[/red]")
 
