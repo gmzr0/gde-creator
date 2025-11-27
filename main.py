@@ -10,7 +10,8 @@ from rich.table import Table
 from rich.panel import Panel
 from prompt_toolkit.completion import PathCompleter
 import filepicker
-
+from pathlib import Path
+import subprocess
 
 console = Console()
 
@@ -104,13 +105,13 @@ async def main():
             f"~/.local/share/applications/{safe_name}.desktop"
         )
         content = f"""[Desktop Entry]
-    Type=Application
-    Name={selected_game["name"]}
-    Exec={final_exec_cmd}
-    Path={cmd_path}
-    Icon={icon_path}
-    Terminal=false
-    Categories=Game;
+Type=Application
+Name={selected_game["name"]}
+Exec={final_exec_cmd}
+Path={cmd_path}
+Icon={icon_path}
+Terminal=false
+Categories=Game
     """
         with open(desktop_path, "w") as f:
             f.write(content)
@@ -119,6 +120,28 @@ async def main():
         console.print(
             Panel("[bold green]Successfully created desktop entry.[/bold green]")
         )
+        if await questionary.confirm(
+            "Do you want to create symlink shortcut on desktop? If ~/Desktop doesn't exist, it will be created."
+        ).ask_async():
+            desktop_dir = get_desktop_path()
+            if desktop_dir is not None:
+                try:
+                    link_name = f"{selected_game['name']}.desktop"
+                    link_on_desktop = Path(desktop_dir) / link_name
+                    console.print(f"[dim]Path: {link_on_desktop}")
+
+                    os.symlink(desktop_path, link_on_desktop)
+                    console.print(
+                        "[green bold]Successfully created desktop symlink.[/green bold]"
+                    )
+                except FileExistsError:
+                    console.print("[yellow]Symlink already exists.[/yellow]")
+                except OSError:
+                    console.print("[red]OS Error.[/red]")
+                except Exception:
+                    console.print("[red]Error when creating symlink.[/red]")
+            else:
+                console.print("[yellow]Cannot find desktop folder.[/yellow]")
     else:
         console.print("[red]Canceled.[/red]")
 
@@ -216,6 +239,17 @@ async def get_game_assets(steam_id):
     except Exception as e:
         console.print(e)
         return
+
+
+def get_desktop_path():
+    try:
+        path = (
+            subprocess.check_output(["xdg-user-dir", "DESKTOP"]).decode("utf-8").strip()
+        )
+        os.makedirs(path, exist_ok=True)
+        return path
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return None
 
 
 if __name__ == "__main__":
