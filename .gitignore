@@ -3,6 +3,7 @@ __pycache__/
 *.py[oc]
 .python-version
 build/
+build.sh
 dist/
 *.spec
 wheels/
