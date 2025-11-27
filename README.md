@@ -26,7 +26,7 @@ tar -xvf gde-creator-linux-x64.tar.gz
 #### Using `yay`:
 1. Type into terminal and follow installation:
 ```console
-yay -Sy gde-creator
+yay -S gde-creator
 ```
 2. Run app:
 ```console
@@ -61,3 +61,5 @@ gde-creator
 2. [Questionary](https://github.com/tmbo/questionary) - for interactive menus.
 3. [Httpx](https://www.python-httpx.org/) - for async API requests.
 4. [PyInstaller](https://pyinstaller.org/) - building the standalone binary.
+5. [Nuitka](https://github.com/Nuitka/Nuitka) - python translator to C and compiler
+6. [Textualize](https://github.com/Textualize/textual) - another terminal UI lib
