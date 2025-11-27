@@ -9,6 +9,7 @@ from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 from prompt_toolkit.completion import PathCompleter
+import filepicker
 
 
 console = Console()
@@ -56,20 +57,13 @@ async def main():
 
     icon_path = await get_game_assets(game_id)
 
-    default_exec = ""
-    console.print(
-        "[yellow]Please provide [red]absolute path[/red] to .exe file or sh script. \nIn next input you will include runner commands.[/yellow]"
-    )
+    with console.status("[bold green]Picking file...[/bold green]"):
+        picker = filepicker.FilePickerRunner(start_path=os.path.expanduser("~"))
+        exec_cmd = await picker.run_async()
+        if exec_cmd is None:
+            raise KeyboardInterrupt
 
-    exec_cmd = await questionary.text(
-        "Please provide exec path:",
-        default=default_exec,
-        completer=PathCompleter(),
-        validate=NameValidator,
-    ).ask_async()
-    if exec_cmd is None:
-        raise KeyboardInterrupt
-
+    console.print("[bold green]File provided.[/bold green]")
     runner_cmd = await questionary.text(
         "Please provide runner commands (blank if no runner or sh script provided before):",
         default="",

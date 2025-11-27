@@ -1,0 +1,32 @@
+FilePickerScreen {
+    align: center middle;
+    background: $surface 50%; /* Półprzezroczyste tło */
+}
+
+#dialog {
+    width: 80%;
+    height: 80%;
+    background: $surface;
+    border: solid $accent;
+    padding: 1;
+}
+
+#path_input {
+    dock: top;
+    margin-bottom: 1;
+}
+
+DirectoryTree {
+    height: 1fr;
+    border: solid $secondary;
+    background: $surface;
+}
+
+#buttons {
+    dock: bottom;
+    height: 3;
+    margin-top: 1;
+    align: right middle;
+}
+
+Button { margin-left: 1; }
