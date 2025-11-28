@@ -19,6 +19,19 @@ import time
 
 console = Console()
 
+HOME_DIR = Path.home()
+ICONS_DIR = HOME_DIR / ".local/share/icons/hicolor/32x32/apps"
+APPLICATIONS_DIR = HOME_DIR / ".local/share/applications"
+
+STEAM_SEARCH_URL = "https://store.steampowered.com/api/storesearch/"
+STEAM_COMMUNITY_URL = "https://steamcommunity.com/app/"
+
+COOKIES = {
+    "wants_mature_content": "1",
+    "birthtime": "189302401",
+    "lastagecheckage": "1-January-1980",
+}
+
 
 async def main():
     console.print(
@@ -31,7 +44,7 @@ async def main():
     console.print(
         Panel.fit(
             "[bold magenta]Defaults:[/bold magenta]\n"
-            "[dim]Icon path: ~/.local/share/icons/gameicons/*[/dim]",
+            "[dim]Icon path: ~/.local/share/icons/hicolor/32x32/apps[/dim]",
             border_style="cyan",
         )
     )
